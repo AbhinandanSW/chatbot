@@ -1,4 +1,6 @@
-const API_BASE = 'http://0.0.0.0:8000';
+const { VITE_APP_API_URL } = import.meta.env;
+
+const API_BASE = VITE_APP_API_URL;
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('access_token');

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+const { VITE_APP_API_URL } = import.meta.env;
 
-const API_BASE = 'http://0.0.0.0:8000';
+const API_BASE = VITE_APP_API_URL;
 
 interface User {
   id: string;

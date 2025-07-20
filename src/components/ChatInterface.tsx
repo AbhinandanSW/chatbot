@@ -4,7 +4,7 @@ import { ChatInput } from './ChatInput';
 import { CodeArtifact, type CodeArtifact as CodeArtifactType } from './CodeArtifact';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-
+const { VITE_APP_API_URL } = import.meta.env;
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -68,7 +68,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://0.0.0.0:8000/chat/stream', {
+      const response = await fetch(`${VITE_APP_API_URL}/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

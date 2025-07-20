@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { ChatInterface } from './ChatInterface';
-import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+// import { Button } from '@/components/ui/button';
+// import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { CodeArtifact } from './CodeArtifact';
-
+const { VITE_APP_API_URL } = import.meta.env;
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -106,7 +106,7 @@ export const MainLayout: React.FC = () => {
     if (!token) {
       throw new Error('No authentication token found');
     }
-    const response: any = await fetch('http://0.0.0.0:8000/chat/threads', {
+    const response: any = await fetch(`${VITE_APP_API_URL}/chat/threads`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export const MainLayout: React.FC = () => {
     if (!token) {
       throw new Error('No authentication token found');
     }
-    const response: any = await fetch(`http://0.0.0.0:8000/chat/history/${thread_id}?limit=10000`, {
+    const response: any = await fetch(`${VITE_APP_API_URL}/chat/history/${thread_id}?limit=10000`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
