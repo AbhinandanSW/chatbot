@@ -192,14 +192,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="end" className="w-56">
-            <DropdownMenuItem>
+            {/* <DropdownMenuItem>
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem>
               <History className="h-4 w-4 mr-2" />
               Chat history
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem onClick={logout} className="text-destructive">
               <LogOut className="h-4 w-4 mr-2" />
               Sign out

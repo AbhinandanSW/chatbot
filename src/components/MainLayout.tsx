@@ -15,21 +15,15 @@ interface Message {
 
 interface ChatItem {
   id: string;
+  thread_id:string;
   title: string;
   updatedAt: string;
   messages: Message[];
 }
 
 export const MainLayout: React.FC = () => {
-  const [chats, setChats] = useState<ChatItem[]>([
-    {
-      id: '1',
-      title: 'Welcome conversation',
-      updatedAt: new Date().toISOString(),
-      messages: []
-    }
-  ]);
-  const [currentChatId, setCurrentChatId] = useState<string>('1');
+  const [chats, setChats] = useState<ChatItem[]>();
+  const [currentChatId, setCurrentChatId] = useState<string>(crypto.randomUUID() || '1');
   const [currentArtifact, setCurrentArtifact] = useState<CodeArtifact | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<Message[]>([]);
 
@@ -38,6 +32,7 @@ export const MainLayout: React.FC = () => {
   const handleNewChat = () => {
     const newChat: ChatItem = {
       id: Date.now().toString(),
+      thread_id:crypto.randomUUID(),
       title: 'New conversation',
       updatedAt: new Date().toISOString(),
       messages: []
@@ -116,6 +111,7 @@ export const MainLayout: React.FC = () => {
     const data = await response.json()
 
     setChats(data?.threads)
+    handleNewChat()
   }
   const handle_fetch_chat_meesages = async (thread_id: string) => {
     const token = localStorage.getItem('access_token');
@@ -130,7 +126,7 @@ export const MainLayout: React.FC = () => {
       },
     });
     const data = await response.json()
-    console.log(data, 'message')
+
     setCurrentChatMessages(data?.messages)
   }
   useEffect(() => {
@@ -153,7 +149,7 @@ export const MainLayout: React.FC = () => {
 
         <main className="flex-1 flex flex-col">
           <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-4">
-            <SidebarTrigger className="flex-shrink-0" />
+            {/* <SidebarTrigger className="flex-shrink-0" /> */}
             <div className="text-sm font-medium text-center flex-1">
               {currentChat?.title || 'New conversation'}
             </div>
