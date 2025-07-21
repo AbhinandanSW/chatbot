@@ -4,7 +4,9 @@ import { ChatInput } from './ChatInput';
 import { CodeArtifact, type CodeArtifact as CodeArtifactType } from './CodeArtifact';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+
 const { VITE_APP_API_URL } = import.meta.env;
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -26,10 +28,12 @@ interface ChatInterfaceProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   onMessageComplete?: (message: Message) => void;
+  onStreamingUpdate?: (content: string) => void;
   className?: string;
   currentArtifact?: CodeArtifactType | null;
   onShowArtifact?: (artifact: CodeArtifactType) => void;
   onCloseArtifact?: () => void;
+  isLoadingMessages?: boolean;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -37,26 +41,42 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
   onSendMessage,
   onMessageComplete,
+  onStreamingUpdate,
   className,
   currentArtifact,
   onShowArtifact,
   onCloseArtifact,
+  isLoadingMessages = false,
 }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [streamingId, setStreamingId] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const scrollElement = scrollRef.current;
+      scrollElement.scrollTop = scrollElement.scrollHeight;
     }
   }, [messages, streamingMessage]);
+
+  // Reset streaming state when chat changes
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsStreaming(false);
+    setStreamingMessage('');
+    setStreamingId('');
+  }, [chatId]);
 
   const streamApiResponse = async (userMessage: string) => {
     setIsStreaming(true);
     setStreamingMessage('');
+    const streamId = `streaming-${Date.now()}`;
+    setStreamingId(streamId);
     
     // Create a new AbortController for this request
     abortControllerRef.current = new AbortController();
@@ -103,20 +123,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const lines = chunk.split('\n');
         
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('data: ') && line.trim() !== 'data: ') {
             try {
               const jsonStr = line.slice(6); // Remove 'data: ' prefix
+              
+              // Skip empty data or [DONE] messages
+              if (jsonStr.trim() === '' || jsonStr.trim() === '[DONE]') {
+                continue;
+              }
+              
               const data = JSON.parse(jsonStr) as StreamResponse;
               
               if (data.error_message) {
+                console.error('Stream error:', data.error_message);
                 throw new Error(data.error_message);
               }
               
+              // Only process messages for the current thread
+              if (data.thread_id && data.thread_id !== chatId) {
+                continue;
+              }
+
               if (data.type === 'delta' && data.content) {
                 accumulatedContent += data.content;
                 setStreamingMessage(accumulatedContent);
+                onStreamingUpdate?.(accumulatedContent);
               } else if (data.type === 'completion') {
-                // Stream completed
+                // Stream completed - create final message
                 const finalMessage: Message = {
                   id: Date.now().toString(),
                   role: 'assistant',
@@ -125,10 +158,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 };
                 
                 onMessageComplete?.(finalMessage);
-                break;
+                
+                // Clean up streaming state
+                setIsStreaming(false);
+                setStreamingMessage('');
+                setStreamingId('');
+                return; // Exit the function
               }
             } catch (parseError) {
               console.error('Error parsing SSE data:', parseError);
+              // Continue processing other lines
             }
           }
         }
@@ -137,15 +176,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
         console.error('Streaming error:', error);
+        
+        // Create error message
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: 'Sorry, I encountered an error while processing your request. Please try again.',
+          timestamp: new Date(),
+        };
+        
+        onMessageComplete?.(errorMessage);
       }
     } finally {
       setIsStreaming(false);
       setStreamingMessage('');
+      setStreamingId('');
       abortControllerRef.current = null;
     }
   };
 
   const handleSendMessage = async (message: string) => {
+    if (!message.trim() || isStreaming) return;
+    
     // Add user message immediately
     onSendMessage(message);
     
@@ -157,12 +209,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    setIsStreaming(false);
+    setStreamingMessage('');
+    setStreamingId('');
   };
 
-  const allMessages = [...messages];
+  // Combine regular messages with streaming message
+  const displayMessages = [...messages];
   if (isStreaming && streamingMessage) {
-    allMessages.push({
-      id: 'streaming',
+    displayMessages.push({
+      id: streamingId,
       role: 'assistant',
       content: streamingMessage,
       timestamp: new Date(),
@@ -178,7 +234,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}>
         <ScrollArea ref={scrollRef} className="flex-1 custom-scrollbar">
           <div className="max-w-4xl mx-auto">
-            {allMessages.length === 0 ? (
+            {isLoadingMessages ? (
+              <div className="flex items-center justify-center h-full min-h-[400px]">
+                <div className="text-center space-y-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground">Loading messages...</p>
+                </div>
+              </div>
+            ) : displayMessages?.length === 0 ? (
               <div className="flex items-center justify-center h-full min-h-[400px]">
                 <div className="text-center space-y-4 max-w-md">
                   <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
@@ -194,12 +257,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             ) : (
               <div className="space-y-0">
-                {allMessages.map((message, index) => (
+                {displayMessages?.map((message) => (
                   <ChatMessage
                     key={message.id}
                     role={message.role}
                     content={message.content}
-                    isStreaming={message.id === 'streaming'}
+                    isStreaming={message.id === streamingId && isStreaming}
                     onShowArtifact={onShowArtifact}
                   />
                 ))}
@@ -213,6 +276,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           onStopGeneration={handleStopGeneration}
           isStreaming={isStreaming}
           placeholder="Send a message..."
+          disabled={isLoadingMessages}
         />
       </div>
 

@@ -29,21 +29,21 @@ export const CodeArtifact: React.FC<CodeArtifactProps> = ({
   const [view, setView] = useState<'code' | 'preview'>('code');
   const [streamContent, setStreamContent] = useState<CodeArtifact | null>(artifact);
 
-  useEffect(() => {
-    // Simulate stream data arriving every 2 seconds.
-    const streamSimulator = setInterval(() => {
-      // Simulate new content coming in. In your case, this would come from a WebSocket, SSE, or other stream.
-      const newContent = {
-        id: 'new-id',
-        language: 'markdown',
-        content: 'This is **Markdown** content that is streamed!',
-        title: 'Streaming Content',
-      };
-      setStreamContent(newContent); // Update the content when new data arrives
-    }, 2000);
+  // useEffect(() => {
+  //   // Simulate stream data arriving every 2 seconds.
+  //   const streamSimulator = setInterval(() => {
+  //     // Simulate new content coming in. In your case, this would come from a WebSocket, SSE, or other stream.
+  //     const newContent = {
+  //       id: 'new-id',
+  //       language: 'markdown',
+  //       content: 'This is **Markdown** content that is streamed!',
+  //       title: 'Streaming Content',
+  //     };
+  //     setStreamContent(newContent); // Update the content when new data arrives
+  //   }, 2000);
 
-    return () => clearInterval(streamSimulator); // Cleanup on component unmount
-  }, []);
+  //   return () => clearInterval(streamSimulator); // Cleanup on component unmount
+  // }, []);
 
   if (!streamContent) return null;
 
